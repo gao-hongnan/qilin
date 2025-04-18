@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Iterable, Iterator
-from typing import Self, overload
+from typing import Generic, Self, overload
 
 from rich.repr import Result
 
@@ -14,7 +14,7 @@ class ArrayStack(AbstractStack[T]):
     will be [1, 2, 3] where 3 is the top of the stack.
     """
 
-    __slots__ = ("_items",)
+    __slots__ = ("_values",)
 
     @overload
     def __init__(self) -> None: ...
@@ -23,18 +23,18 @@ class ArrayStack(AbstractStack[T]):
     def __init__(self, iterable: Iterable[T]) -> None: ...
 
     def __init__(self, iterable: Iterable[T] | None = None) -> None:
-        self._items: list[T] = []
+        self._values: list[T] = []
 
         # NOTE: If during initialization, the user provides an iterable, we would then first instantiate the empty stack
-        # by pushing each item onto the stack.
+        # by pushing each value onto the stack.
         if iterable is not None:  # NOTE: we allow empty iterable
             """NOTE: copy first to avoid mutating caller's iterable if it's a list, which it is.
             This allows us avoid any surprises and at the cost of 1 extra list allocation which we incur in Cpython's
             list.extend anyways.
             """
             buffered = list(iterable)
-            self._items.extend(buffered)
-            """NOTE: Why not just loop over iterable and push item?
+            self._values.extend(buffered)
+            """NOTE: Why not just loop over iterable and push value?
             1. One C-level call copies the iterable into the underlying list.
             2. If future subclass overrides this class and push method change? We control what happens in this init.
             """
@@ -43,29 +43,29 @@ class ArrayStack(AbstractStack[T]):
     def size(self) -> int:
         return self.__len__()
 
-    def push(self, item: T) -> None:
+    def push(self, value: T) -> None:
         """
-        Add an item to the top of the stack.
+        Add a value to the top of the stack.
 
         Parameters
         ----------
-        item : T
-            The item to add to the stack.
+        value : T
+            The value to add to the stack.
 
         Time Complexity
         --------------
         O(1) amortized - occasional resizing may occur at O(n)
         """
-        self._items.append(item)
+        self._values.append(value)
 
     def pop(self) -> T:
         """
-        Remove and return the item at the top of the stack.
+        Remove and return the value at the top of the stack.
 
         Returns
         -------
         T
-            The item at the top of the stack.
+            The value at the top of the stack.
 
         Raises
         ------
@@ -78,16 +78,16 @@ class ArrayStack(AbstractStack[T]):
         """
         if self.is_empty():
             raise IndexError("pop from an empty stack")
-        return self._items.pop()
+        return self._values.pop()
 
     def peek(self) -> T:
         """
-        Return the item at the top of the stack without removing it.
+        Return the value at the top of the stack without removing it.
 
         Returns
         -------
         T
-            The item at the top of the stack.
+            The value at the top of the stack.
 
         Raises
         ------
@@ -100,10 +100,10 @@ class ArrayStack(AbstractStack[T]):
         """
         if self.is_empty():
             raise IndexError("peek from an empty stack")
-        return self._items[-1]
+        return self._values[-1]
 
     def clear(self) -> None:
-        self._items[:] = []  # NOTE: 1 C-level ops, even tho O(n) but few python instructions
+        self._values[:] = []  # NOTE: 1 C-level ops, even tho O(n) but few python instructions
 
     def __iter__(self) -> Iterator[T]:
         """
@@ -112,23 +112,23 @@ class ArrayStack(AbstractStack[T]):
         Yields
         ------
         T
-            Each item in the stack, starting from the top.
+            Each value in the stack, starting from the top.
 
         Time Complexity
         --------------
-        O(n) where n is the number of items in the stack.
+        O(n) where n is the number of values in the stack.
         """
-        # NOTE: can just be return reversed(self._items), memory cheap view in CPython.
-        for index in range(len(self._items) - 1, -1, -1):
-            yield self._items[index]
+        # NOTE: can just be return reversed(self._values), memory cheap view in CPython.
+        for index in range(len(self._values) - 1, -1, -1):
+            yield self._values[index]
 
     def __len__(self) -> int:
-        return self._items.__len__()
+        return self._values.__len__()
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, ArrayStack):
             return NotImplemented
-        return self._items == other._items
+        return self._values == other._values
 
     __hash__: Callable[[Self], int] | None = None  # stacks are mutable so they are not hashable
 
@@ -140,11 +140,11 @@ class ArrayStack(AbstractStack[T]):
         if self.is_empty():
             return f"{self.__class__.__name__}([])"
 
-        items_str = ", ".join(str(item) for item in self._items)
-        return f"{self.__class__.__name__}([{items_str}])"
+        values_str = ", ".join(str(value) for value in self._values)
+        return f"{self.__class__.__name__}([{values_str}])"
 
     def __repr__(self) -> str:
         return self.__str__()
 
     def __rich_repr__(self) -> Result:
-        yield "items", self._items
+        yield "values", self._values
